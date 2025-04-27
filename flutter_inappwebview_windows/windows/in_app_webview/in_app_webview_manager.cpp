@@ -2,6 +2,7 @@
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 #include <shlobj.h>
+#include <wil/wrl.h>
 #include <windows.graphics.capture.h>
 
 #include "../in_app_webview/in_app_webview_settings.h"
@@ -45,7 +46,7 @@ namespace flutter_inappwebview_plugin
         compositor_ = graphics_context_->CreateCompositor();
         if (compositor_) {
           // fix for KernelBase.dll RaiseFailFastException
-          // when app is closing 
+          // when app is closing
           compositor_->AddRef();
         }
         valid_ = graphics_context_->IsValid();
@@ -119,6 +120,9 @@ namespace flutter_inappwebview_plugin
     auto keepAliveId = get_optional_fl_map_value<std::string>(*arguments, "keepAliveId");
     auto windowId = get_optional_fl_map_value<int64_t>(*arguments, "windowId");
 
+    // add context menu
+    auto contextMenuMap  = get_optional_fl_map_value<flutter::EncodableMap>(*arguments,"contextMenu");
+
     RECT bounds;
     GetClientRect(plugin->registrar->GetView()->GetNativeWindow(), &bounds);
 
@@ -163,7 +167,7 @@ namespace flutter_inappwebview_plugin
             initialUserScripts
           };
 
-          auto inAppWebView = std::make_unique<InAppWebView>(plugin, params, hwnd, std::move(webViewEnv), std::move(webViewController), std::move(webViewCompositionController));
+          auto inAppWebView = std::make_unique<InAppWebView>(plugin, params,std::move(contextMenuMap), hwnd, std::move(webViewEnv), std::move(webViewController), std::move(webViewCompositionController));
 
           std::optional<std::shared_ptr<URLRequest>> urlRequest = urlRequestMap.has_value() ? std::make_shared<URLRequest>(urlRequestMap.value()) : std::optional<std::shared_ptr<URLRequest>>{};
           if (urlRequest.has_value()) {
@@ -200,6 +204,7 @@ namespace flutter_inappwebview_plugin
             customPlatformView->view->initChannel(textureId, std::nullopt);
             webViews.insert({ textureId, std::move(customPlatformView) });
           }
+
           result_->Success(textureId);
         }
         else {

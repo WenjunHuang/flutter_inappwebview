@@ -78,7 +78,7 @@ namespace flutter_inappwebview_plugin
       [this, params, webViewParams](wil::com_ptr<ICoreWebView2Environment> webViewEnv, wil::com_ptr<ICoreWebView2Controller> webViewController, wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController) -> void
       {
         if (webViewEnv && webViewController) {
-          webView = std::make_unique<InAppWebView>(this, this->plugin, webViewParams, m_hWnd, std::move(webViewEnv), std::move(webViewController), nullptr);
+          webView = std::make_unique<InAppWebView>(this, this->plugin, webViewParams, std::nullopt, m_hWnd, std::move(webViewEnv), std::move(webViewController), nullptr);
           webView->initChannel(std::nullopt, InAppBrowser::METHOD_CHANNEL_NAME_PREFIX + id);
 
           if (channelDelegate) {

@@ -176,6 +176,8 @@ list(APPEND PLUGIN_SOURCES
   "in_app_webview/in_app_webview_manager.h"
   "in_app_webview/webview_channel_delegate.cpp"
   "in_app_webview/webview_channel_delegate.h"
+        "in_app_webview/context_menu_settings.h"
+        "in_app_webview/context_menu_settings.cpp"
   "headless_in_app_webview/headless_in_app_webview.cpp"
   "headless_in_app_webview/headless_in_app_webview.h"
   "headless_in_app_webview/headless_in_app_webview_manager.cpp"
@@ -238,7 +240,7 @@ endif()
 # Also, added /bigobj flag.
 function(FLUTTER_INAPPWEBVIEW_WINDOWS_APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
-  target_compile_options(${TARGET} PRIVATE /W4 /wd"4100")
+  target_compile_options(${TARGET} PRIVATE /W4 /wd4100)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_options(${TARGET} PRIVATE /bigobj)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
@@ -249,6 +251,12 @@ flutter_inappwebview_windows_apply_standard_settings(${PLUGIN_NAME})
 target_link_libraries(${PLUGIN_NAME} PRIVATE ${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2/build/native/Microsoft.Web.WebView2.targets)
 target_link_libraries(${PLUGIN_NAME} PRIVATE ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.ImplementationLibrary/build/native/Microsoft.Windows.ImplementationLibrary.targets)
 target_link_libraries(${PLUGIN_NAME} PRIVATE ${CMAKE_BINARY_DIR}/packages/nlohmann.json/build/native/nlohmann.json.targets)
+
+target_include_directories(${PLUGIN_NAME} PRIVATE
+        ${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2/build/native/include
+        ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.ImplementationLibrary/include
+        ${CMAKE_BINARY_DIR}/packages/nlohmann.json/build/native/include
+)
 
 # Symbols are hidden by default to reduce the chance of accidental conflicts
 # between plugins. This should not be removed; any symbols that should be

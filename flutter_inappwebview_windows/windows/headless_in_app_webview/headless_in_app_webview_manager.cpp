@@ -96,7 +96,7 @@ namespace flutter_inappwebview_plugin
             initialUserScripts
           };
 
-          auto inAppWebView = std::make_unique<InAppWebView>(plugin, params, hwnd,
+          auto inAppWebView = std::make_unique<InAppWebView>(plugin, params,std::nullopt, hwnd,
             std::move(webViewEnv), std::move(webViewController), nullptr
           );
 

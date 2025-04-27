@@ -102,12 +102,17 @@ namespace flutter_inappwebview_plugin
     std::shared_ptr<InAppWebViewSettings> settings;
     InAppBrowser* inAppBrowser = nullptr;
     std::unique_ptr<UserContentController> userContentController;
+    std::optional<std::map<flutter::EncodableValue, flutter::EncodableValue>> contextMenu;
 
-    InAppWebView(const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params, const HWND parentWindow,
+    InAppWebView(const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params,
+      std::optional<std::map<flutter::EncodableValue, flutter::EncodableValue>> contextMenu,
+      const HWND parentWindow,
       wil::com_ptr<ICoreWebView2Environment> webViewEnv,
       wil::com_ptr<ICoreWebView2Controller> webViewController,
       wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController);
-    InAppWebView(InAppBrowser* inAppBrowser, const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params, const HWND parentWindow,
+    InAppWebView(InAppBrowser* inAppBrowser, const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params,
+      std::optional<std::map<flutter::EncodableValue, flutter::EncodableValue>> contextMenu,
+      const HWND parentWindow,
       wil::com_ptr<ICoreWebView2Environment> webViewEnv,
       wil::com_ptr<ICoreWebView2Controller> webViewController,
       wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController);
@@ -209,6 +214,7 @@ namespace flutter_inappwebview_plugin
     void registerEventHandlers();
     void registerSurfaceEventHandlers();
     HRESULT onCallJsHandler(const bool& isMainFrame, ICoreWebView2WebMessageReceivedEventArgs* args);
+    void addContextMenu();
   };
 }
 #endif //FLUTTER_INAPPWEBVIEW_PLUGIN_IN_APP_WEBVIEW_H_

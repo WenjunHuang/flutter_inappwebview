@@ -25,15 +25,19 @@
 #include "../utils/uri.h"
 #include "in_app_webview.h"
 #include "in_app_webview_manager.h"
+#include "context_menu_settings.h"
 
 namespace flutter_inappwebview_plugin
 {
   using namespace Microsoft::WRL;
 
-  InAppWebView::InAppWebView(const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params, const HWND parentWindow, wil::com_ptr<ICoreWebView2Environment> webViewEnv,
+  InAppWebView::InAppWebView(const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params,
+                             const std::optional<std::map<flutter::EncodableValue, flutter::EncodableValue>> contextMenu,
+                             const HWND parentWindow, wil::com_ptr<ICoreWebView2Environment> webViewEnv,
     wil::com_ptr<ICoreWebView2Controller> webViewController,
     wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController)
     : plugin(plugin), id(params.id),
+    contextMenu(contextMenu),
     webViewEnv(std::move(webViewEnv)), webViewController(std::move(webViewController)), webViewCompositionController(std::move(webViewCompositionController)),
     settings(params.initialSettings), userContentController(std::make_unique<UserContentController>(this))
   {
@@ -56,15 +60,51 @@ namespace flutter_inappwebview_plugin
     }
 
     prepare(params);
+    addContextMenu();
   }
 
-  InAppWebView::InAppWebView(InAppBrowser* inAppBrowser, const FlutterInappwebviewWindowsPlugin* plugin, const InAppWebViewCreationParams& params, const HWND parentWindow, wil::com_ptr<ICoreWebView2Environment> webViewEnv,
+  InAppWebView::InAppWebView(InAppBrowser* inAppBrowser, const FlutterInappwebviewWindowsPlugin* plugin,
+    const InAppWebViewCreationParams& params,
+    const std::optional<std::map<flutter::EncodableValue, flutter::EncodableValue>> contextMenu,
+    const HWND parentWindow, wil::com_ptr<ICoreWebView2Environment> webViewEnv,
     wil::com_ptr<ICoreWebView2Controller> webViewController,
     wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController)
-    : InAppWebView(plugin, params, parentWindow, std::move(webViewEnv), std::move(webViewController), std::move(webViewCompositionController))
+    : InAppWebView(plugin, params, contextMenu,parentWindow, std::move(webViewEnv), std::move(webViewController), std::move(webViewCompositionController))
   {
     this->inAppBrowser = inAppBrowser;
   }
+
+	void InAppWebView::addContextMenu() {
+		if (!webView || !contextMenu.has_value())
+			return;
+
+		auto hideDefaultMenus = false;
+		auto settings = get_optional_fl_map_value<flutter::EncodableMap>(contextMenu.value(),"settings");
+		if (settings.has_value()) {
+			ContextMenuSettings contextMenuSettings(settings.value());
+			hideDefaultMenus = contextMenuSettings.isHideDefaultSystemContextMenuItems();
+		}
+		auto webView24 = webView.try_query<ICoreWebView2_24>();
+		webView24->add_ContextMenuRequested(Callback<ICoreWebView2ContextMenuRequestedEventHandler>(
+				[this, hideDefaultMenus](ICoreWebView2 *sender, ICoreWebView2ContextMenuRequestedEventArgs *args) {
+				wil::com_ptr<ICoreWebView2ContextMenuItemCollection> items;
+					if (failedAndLog(args->get_MenuItems(&items))) {
+						return E_FAIL;
+					}
+					uint32_t itemsCount;
+					items->get_Count(&itemsCount);
+
+					auto webViewEnv5 = webView.try_query<ICoreWebView2Environment5>();
+
+					if (hideDefaultMenus){
+						for (auto i = 0 ;i < itemsCount;i++) {
+							items->RemoveValueAtIndex(0);
+						}
+					}
+
+					return S_OK;
+				}).Get(), nullptr);
+	}
 
   void InAppWebView::createInAppWebViewEnv(const HWND parentWindow, const bool& willBeSurface, WebViewEnvironment* webViewEnvironment, const std::shared_ptr<InAppWebViewSettings> initialSettings, std::function<void(wil::com_ptr<ICoreWebView2Environment> webViewEnv,
     wil::com_ptr<ICoreWebView2Controller> webViewController,
