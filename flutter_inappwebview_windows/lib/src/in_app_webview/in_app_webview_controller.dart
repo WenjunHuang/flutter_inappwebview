@@ -670,6 +670,39 @@ class WindowsInAppWebViewController extends PlatformInAppWebViewController
           }
         }
         break;
+      case "onContextMenuActionItemClicked":
+        ContextMenu? contextMenu;
+        if (webviewParams != null && webviewParams!.contextMenu != null) {
+          contextMenu = webviewParams!.contextMenu;
+        } else if (_inAppBrowserEventHandler != null &&
+            _inAppBrowser!.contextMenu != null) {
+          contextMenu = _inAppBrowser!.contextMenu;
+        }
+
+        if (contextMenu != null) {
+          String id = call.arguments["id"];
+          String title = call.arguments["title"];
+
+          ContextMenuItem menuItemClicked = ContextMenuItem(
+              id: id,
+              title: title,
+              action: null);
+
+          for (var menuItem in contextMenu.menuItems) {
+            if (menuItem.id == id) {
+              menuItemClicked = menuItem;
+              if (menuItem.action != null) {
+                menuItem.action!();
+              }
+              break;
+            }
+          }
+
+          if (contextMenu.onContextMenuActionItemClicked != null) {
+            contextMenu.onContextMenuActionItemClicked!(menuItemClicked);
+          }
+        }
+        break;
       case "onReceivedIcon":
         if ((webviewParams != null &&
                 (webviewParams!.onReceivedIcon != null ||

@@ -642,7 +642,20 @@ namespace flutter_inappwebview_plugin
     channel->InvokeMethod("onZoomScaleChanged", std::move(arguments));
   }
 
-  WebViewChannelDelegate::~WebViewChannelDelegate()
+	void WebViewChannelDelegate::onContextMenuActionItemClicked(const std::string& id, const std::string& title) const {
+		if (!channel){
+			return;
+		}
+
+		auto arguments = std::make_unique<flutter::EncodableValue>(flutter::EncodableMap{
+				{"id",make_fl_value(id)},
+				{"title",make_fl_value(title)}
+		});
+		channel->InvokeMethod("onContextMenuActionItemClicked",std::move(arguments));
+	}
+
+
+	WebViewChannelDelegate::~WebViewChannelDelegate()
   {
     debugLog("dealloc WebViewChannelDelegate");
     webView = nullptr;

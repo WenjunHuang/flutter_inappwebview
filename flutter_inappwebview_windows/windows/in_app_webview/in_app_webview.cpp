@@ -78,15 +78,10 @@ namespace flutter_inappwebview_plugin
 		if (!webView || !contextMenu.has_value())
 			return;
 
-		auto hideDefaultMenus = false;
-		auto settings = get_optional_fl_map_value<flutter::EncodableMap>(contextMenu.value(),"settings");
-		if (settings.has_value()) {
-			ContextMenuSettings contextMenuSettings(settings.value());
-			hideDefaultMenus = contextMenuSettings.isHideDefaultSystemContextMenuItems();
-		}
+		ContextMenuSettings contextMenuSettings(contextMenu.value());
 		auto webView24 = webView.try_query<ICoreWebView2_24>();
 		webView24->add_ContextMenuRequested(Callback<ICoreWebView2ContextMenuRequestedEventHandler>(
-				[this, hideDefaultMenus](ICoreWebView2 *sender, ICoreWebView2ContextMenuRequestedEventArgs *args) {
+				[this, contextMenuSettings = std::move(contextMenuSettings)](ICoreWebView2 *sender, ICoreWebView2ContextMenuRequestedEventArgs *args) {
 				wil::com_ptr<ICoreWebView2ContextMenuItemCollection> items;
 					if (failedAndLog(args->get_MenuItems(&items))) {
 						return E_FAIL;
@@ -94,11 +89,28 @@ namespace flutter_inappwebview_plugin
 					uint32_t itemsCount;
 					items->get_Count(&itemsCount);
 
-					auto webViewEnv5 = webView.try_query<ICoreWebView2Environment5>();
+					auto webViewEnv9 = webViewEnv.try_query<ICoreWebView2Environment9>();
 
-					if (hideDefaultMenus){
+					if (contextMenuSettings.isHideDefaultSystemContextMenuItems()){
 						for (auto i = 0 ;i < itemsCount;i++) {
 							items->RemoveValueAtIndex(0);
+						}
+					}
+
+					auto&& contextMenuItems = contextMenuSettings.getContextMenuItems();
+					for (auto& item :contextMenuItems) {
+						wil::com_ptr<ICoreWebView2ContextMenuItem> menuItem;
+						if (succeededOrLog(webViewEnv9->CreateContextMenuItem(
+								utf8_to_wide(item.title).c_str(),
+								nullptr,
+								COREWEBVIEW2_CONTEXT_MENU_ITEM_KIND_COMMAND,
+							  &menuItem))){
+							menuItem->add_CustomItemSelected(
+									Callback<ICoreWebView2CustomItemSelectedEventHandler>([this,item](ICoreWebView2ContextMenuItem *sender, IUnknown* args){
+										channelDelegate->onContextMenuActionItemClicked(item.id,item.title);
+										return S_OK;
+									}).Get(),nullptr);
+							items->InsertValueAtIndex(0, menuItem.get());
 						}
 					}
 
