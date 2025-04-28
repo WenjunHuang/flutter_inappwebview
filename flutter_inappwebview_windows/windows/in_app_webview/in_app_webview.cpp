@@ -74,49 +74,52 @@ namespace flutter_inappwebview_plugin
     this->inAppBrowser = inAppBrowser;
   }
 
-	void InAppWebView::addContextMenu() {
-		if (!webView || !contextMenu.has_value())
-			return;
+  void InAppWebView::addContextMenu()
+  {
+      if (!webView || !contextMenu.has_value())
+          return;
 
-		ContextMenuSettings contextMenuSettings(contextMenu.value());
-		auto webView24 = webView.try_query<ICoreWebView2_24>();
-		webView24->add_ContextMenuRequested(Callback<ICoreWebView2ContextMenuRequestedEventHandler>(
-				[this, contextMenuSettings = std::move(contextMenuSettings)](ICoreWebView2 *sender, ICoreWebView2ContextMenuRequestedEventArgs *args) {
-				wil::com_ptr<ICoreWebView2ContextMenuItemCollection> items;
-					if (failedAndLog(args->get_MenuItems(&items))) {
-						return E_FAIL;
-					}
-					uint32_t itemsCount;
-					items->get_Count(&itemsCount);
+      ContextMenuSettings contextMenuSettings(contextMenu.value());
+      auto webView24 = webView.try_query<ICoreWebView2_24>();
+      webView24->add_ContextMenuRequested(Callback<ICoreWebView2ContextMenuRequestedEventHandler>(
+                                              [this, contextMenuSettings = std::move(contextMenuSettings)](ICoreWebView2* sender, ICoreWebView2ContextMenuRequestedEventArgs* args) {
+                                                  wil::com_ptr<ICoreWebView2ContextMenuItemCollection> items;
+                                                  if (failedAndLog(args->get_MenuItems(&items))) {
+                                                      return E_FAIL;
+                                                  }
+                                                  uint32_t itemsCount;
+                                                  items->get_Count(&itemsCount);
 
-					auto webViewEnv9 = webViewEnv.try_query<ICoreWebView2Environment9>();
+                                                  if (contextMenuSettings.isHideDefaultSystemContextMenuItems()) {
+                                                      for (uint32_t i = 0; i < itemsCount; i++) {
+                                                          items->RemoveValueAtIndex(0);
+                                                      }
+                                                  }
 
-					if (contextMenuSettings.isHideDefaultSystemContextMenuItems()){
-						for (auto i = 0 ;i < itemsCount;i++) {
-							items->RemoveValueAtIndex(0);
-						}
-					}
+                                                  auto webViewEnv9 = webViewEnv.try_query<ICoreWebView2Environment9>();
+                                                  auto&& contextMenuItems = contextMenuSettings.getContextMenuItems();
+                                                  for (auto& item : contextMenuItems) {
+                                                      wil::com_ptr<ICoreWebView2ContextMenuItem> menuItem;
+                                                      if (succeededOrLog(webViewEnv9->CreateContextMenuItem(
+                                                              utf8_to_wide(item.title).c_str(),
+                                                              nullptr,
+                                                              COREWEBVIEW2_CONTEXT_MENU_ITEM_KIND_COMMAND,
+                                                              &menuItem))) {
+                                                          menuItem->add_CustomItemSelected(
+                                                              Callback<ICoreWebView2CustomItemSelectedEventHandler>([this, item](ICoreWebView2ContextMenuItem* sender, IUnknown* args) {
+                                                                  channelDelegate->onContextMenuActionItemClicked(item.id, item.title);
+                                                                  return S_OK;
+                                                              }).Get(),
+                                                              nullptr);
+                                                          items->InsertValueAtIndex(0, menuItem.get());
+                                                      }
+                                                  }
 
-					auto&& contextMenuItems = contextMenuSettings.getContextMenuItems();
-					for (auto& item :contextMenuItems) {
-						wil::com_ptr<ICoreWebView2ContextMenuItem> menuItem;
-						if (succeededOrLog(webViewEnv9->CreateContextMenuItem(
-								utf8_to_wide(item.title).c_str(),
-								nullptr,
-								COREWEBVIEW2_CONTEXT_MENU_ITEM_KIND_COMMAND,
-							  &menuItem))){
-							menuItem->add_CustomItemSelected(
-									Callback<ICoreWebView2CustomItemSelectedEventHandler>([this,item](ICoreWebView2ContextMenuItem *sender, IUnknown* args){
-										channelDelegate->onContextMenuActionItemClicked(item.id,item.title);
-										return S_OK;
-									}).Get(),nullptr);
-							items->InsertValueAtIndex(0, menuItem.get());
-						}
-					}
-
-					return S_OK;
-				}).Get(), nullptr);
-	}
+                                                  return S_OK;
+                                              })
+                                              .Get(),
+          nullptr);
+  }
 
   void InAppWebView::createInAppWebViewEnv(const HWND parentWindow, const bool& willBeSurface, WebViewEnvironment* webViewEnvironment, const std::shared_ptr<InAppWebViewSettings> initialSettings, std::function<void(wil::com_ptr<ICoreWebView2Environment> webViewEnv,
     wil::com_ptr<ICoreWebView2Controller> webViewController,

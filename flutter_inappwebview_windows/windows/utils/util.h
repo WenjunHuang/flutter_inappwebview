@@ -6,6 +6,9 @@
 #include <string>
 #include <variant>
 
+template<typename>
+inline constexpr bool always_false_v = false;
+
 namespace flutter_inappwebview_plugin
 {
   template<typename T>
